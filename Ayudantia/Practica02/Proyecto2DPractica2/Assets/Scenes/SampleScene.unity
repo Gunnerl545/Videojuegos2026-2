@@ -411,6 +411,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23629301a0518724f9a2e0c3a86e97ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Jugador
+  enSuelo: 0
 --- !u!114 &554222747
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -423,8 +424,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb64c5ac0b08821489e2ce0e63dffed8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ControlJugador
-  velocidad: 5
-  fuerzaSalto: 8
+  velocidadActual: 0
+  velocidadMax: 5
+  aceleracion: 10
+  velocidadVertical: 0
+  gravedad: -20
+  tiempoMaxSalto: 0.2
 --- !u!95 &554222751
 Animator:
   serializedVersion: 7
@@ -643,7 +648,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2307045686968058816, guid: b4355cd474c1c5f409c5c08a1d0d5999, type: 3}
       propertyPath: m_GravityScale
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
