@@ -427,9 +427,16 @@ MonoBehaviour:
   velocidadActual: 0
   velocidadMax: 5
   aceleracion: 10
+  desaceleracion: 8
   velocidadVertical: 0
+  fuerzaSalto: 10
   gravedad: -20
-  tiempoMaxSalto: 0.2
+  gravedadCaida: -30
+  tiempoCoyote: 0.1
+  tiempoBufferSalto: 0.1
+  estaCaminando: 0
+  estaSaltando: 0
+  estaCayendo: 0
 --- !u!95 &554222751
 Animator:
   serializedVersion: 7
@@ -647,8 +654,16 @@ PrefabInstance:
       value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 2307045686968058816, guid: b4355cd474c1c5f409c5c08a1d0d5999, type: 3}
+      propertyPath: m_Interpolate
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2307045686968058816, guid: b4355cd474c1c5f409c5c08a1d0d5999, type: 3}
       propertyPath: m_GravityScale
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2307045686968058816, guid: b4355cd474c1c5f409c5c08a1d0d5999, type: 3}
+      propertyPath: m_CollisionDetection
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
