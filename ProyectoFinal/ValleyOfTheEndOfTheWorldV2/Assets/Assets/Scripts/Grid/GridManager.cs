@@ -2,10 +2,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+// Controla el estado y comportamiento de todos los tiles del juego
 public class GridManager : MonoBehaviour
 {
     [Header("Tilemap")]
-    public Tilemap tilemap;
+    public Tilemap tilemap; // Referencia al tilemap de Unity
 
     [Header("Tiles")]
     public TileBase grassTile;
@@ -14,15 +15,16 @@ public class GridManager : MonoBehaviour
     public TileBase seededTile;
     public TileBase grownTile;
 
+    // Diccionario que guarda el estado lógico de cada tile
     private Dictionary<Vector3Int, TileData> tileDataDict = new Dictionary<Vector3Int, TileData>();
 
-    // Obtener posición del tile
+    // Convierte una posición del mundo a una celda del tilemap
     public Vector3Int GetTilePosition(Vector2 worldPosition)
     {
         return tilemap.WorldToCell(worldPosition);
     }
 
-    // Obtener o crear datos del tile
+    // Obtiene el estado del tile o lo crea si no existe
     public TileData GetTileData(Vector3Int pos)
     {
         if (!tileDataDict.ContainsKey(pos))
@@ -62,7 +64,6 @@ public class GridManager : MonoBehaviour
         }
     }
 
-    // 💧 Regar
     public void WaterTile(Vector3Int position)
     {
         TileData data = GetTileData(position);
@@ -84,8 +85,12 @@ public class GridManager : MonoBehaviour
 
     void UpdateGrowth()
     {
+        if (tileDataDict == null) return;
+
         foreach (var pair in tileDataDict)
         {
+            if (pair.Value == null) continue;
+
             TileData data = pair.Value;
 
             if (data.hasSeed && !data.isReadyToHarvest)
@@ -118,5 +123,39 @@ public class GridManager : MonoBehaviour
         }
 
         return false;
+    }
+
+    public Dictionary<Vector3Int, TileData> GetGridData()
+    {
+        return tileDataDict;
+    }
+
+    public void SetGridData(Dictionary<Vector3Int, TileData> newData)
+    {
+        if (newData == null)
+        {
+            Debug.LogError("SetGridData recibió null");
+            return;
+        }
+
+        tileDataDict = newData;
+
+        foreach (var pair in tileDataDict)
+        {
+            if (pair.Value == null) continue;
+
+            TileData data = pair.Value;
+
+            if (data.isReadyToHarvest)
+                tilemap.SetTile(pair.Key, grownTile);
+            else if (data.hasSeed)
+                tilemap.SetTile(pair.Key, seededTile);
+            else if (data.isWatered)
+                tilemap.SetTile(pair.Key, wateredTile);
+            else if (data.isPlowed)
+                tilemap.SetTile(pair.Key, plowedTile);
+            else
+                tilemap.SetTile(pair.Key, grassTile);
+        }
     }
 }
