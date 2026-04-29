@@ -47,7 +47,6 @@ public class TimeManager : MonoBehaviour
         // Obtener referencia al GridManager
         gridManager = FindObjectOfType<GridManager>();
 
-        // ⚠️ (duplicado, pero funcional)
         currentPhase = Phase.Farming;
 
         // Guardar estado inicial del día (snapshot)

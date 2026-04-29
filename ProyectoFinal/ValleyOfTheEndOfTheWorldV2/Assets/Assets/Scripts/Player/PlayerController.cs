@@ -3,6 +3,8 @@ using UnityEngine;
 // Controla el movimiento y dirección del jugador
 public class PlayerController : MonoBehaviour
 {
+
+    
     // Velocidad de movimiento del jugador
     public float moveSpeed = 5f;
 
