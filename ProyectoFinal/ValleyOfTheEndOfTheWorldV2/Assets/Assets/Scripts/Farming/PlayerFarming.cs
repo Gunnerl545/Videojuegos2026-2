@@ -60,27 +60,9 @@ public class PlayerFarming : MonoBehaviour
         canFarm = true;
     }
 
-    void Update()
-    {
-        // Si no puede farmear, no hace nada
-        if (!canFarm) return;
-
-        // Input de acciones
-        if (Input.GetKeyDown(KeyCode.Space))
-            Hoe();     // arar
-
-        if (Input.GetMouseButtonDown(1))
-            Water();   // regar
-
-        if (Input.GetKeyDown(KeyCode.F))
-            Plant();   // sembrar
-
-        if (Input.GetKeyDown(KeyCode.E))
-            Harvest(); // cosechar
-    }
 
     // Arar tierra
-    void Hoe()
+    public void Hoe()
     {
         Vector2 point = player.GetInteractionPoint(interactionDistance);
         Vector3Int tilePos = gridManager.GetTilePosition(point);
@@ -89,7 +71,7 @@ public class PlayerFarming : MonoBehaviour
     }
 
     // Regar tierra
-    void Water()
+    public void Water()
     {
         Vector2 point = player.GetInteractionPoint(interactionDistance);
         Vector3Int tilePos = gridManager.GetTilePosition(point);
@@ -98,7 +80,7 @@ public class PlayerFarming : MonoBehaviour
     }
 
     // Sembrar
-    void Plant()
+    public void Plant()
     {
         Vector2 point = player.GetInteractionPoint(interactionDistance);
         Vector3Int tilePos = gridManager.GetTilePosition(point);
@@ -107,7 +89,7 @@ public class PlayerFarming : MonoBehaviour
     }
 
     // Cosechar
-    void Harvest()
+    public void Harvest()
     {
         Vector2 point = player.GetInteractionPoint(interactionDistance);
         Vector3Int tilePos = gridManager.GetTilePosition(point);
