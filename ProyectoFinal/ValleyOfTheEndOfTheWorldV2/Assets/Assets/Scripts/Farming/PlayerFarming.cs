@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Maneja todas las acciones de farming del jugador
+// Maneja todas las las acciones de farming del jugador
 public class PlayerFarming : MonoBehaviour
 {
     // Distancia a la que el jugador puede interactuar
@@ -9,33 +9,46 @@ public class PlayerFarming : MonoBehaviour
     // Recurso recolectado (trigo)
     public int wheatCount = 0;
 
-    // Controla si el jugador puede farmear (depende de la fase del juego)
+    // Cuánta vida recupera cada trigo
+    public int healAmount = 1;
+
+    // Controla si el jugador puede farmear
     private bool canFarm = true;
 
-    // Referencia al sistema del grid (mundo)
-    public GridManager gridManager; // ASIGNAR EN UNITY
+    // Referencia al sistema del grid
+    public GridManager gridManager;
 
     // Referencia al controlador del jugador
     private PlayerController player;
 
+    // Referencia al sistema de vida
+    private PlayerHealth playerHealth;
+
     void Start()
     {
-        // Obtener referencia al PlayerController
+        // Obtener referencias
         player = GetComponent<PlayerController>();
 
-        // Validación de seguridad
+        playerHealth = GetComponent<PlayerHealth>();
+
+        // Validaciones
         if (player == null)
         {
             Debug.LogError("PlayerController no encontrado");
         }
 
+        if (playerHealth == null)
+        {
+            Debug.LogError("PlayerHealth no encontrado");
+        }
+
         if (gridManager == null)
         {
-            Debug.LogError("GridManager no asignado en el inspector");
+            Debug.LogError("GridManager no asignado");
         }
     }
 
-    // Suscripción a eventos del TimeManager
+    // Suscripción a eventos
     void OnEnable()
     {
         TimeManager.OnDefenseStart += DisableFarming;
@@ -48,59 +61,122 @@ public class PlayerFarming : MonoBehaviour
         TimeManager.OnFarmingStart -= EnableFarming;
     }
 
-    // Desactiva farming en fase de defensa
+    // Desactivar farming durante defensa
     void DisableFarming()
     {
         canFarm = false;
     }
 
-    // Activa farming en fase de farming
+    // Activar farming durante día
     void EnableFarming()
     {
         canFarm = true;
     }
 
+    void Update()
+    {
+        // Comer trigo
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            EatWheat();
+        }
+    }
 
-    // Arar tierra
+    // =========================================
+    // ⛏️ ARAR
+    // =========================================
     public void Hoe()
     {
-        Vector2 point = player.GetInteractionPoint(interactionDistance);
-        Vector3Int tilePos = gridManager.GetTilePosition(point);
+        if (!canFarm) return;
+
+        Vector2 point =
+            player.GetInteractionPoint(interactionDistance);
+
+        Vector3Int tilePos =
+            gridManager.GetTilePosition(point);
 
         gridManager.HoeTile(tilePos);
     }
 
-    // Regar tierra
+    // =========================================
+    // 💧 REGAR
+    // =========================================
     public void Water()
     {
-        Vector2 point = player.GetInteractionPoint(interactionDistance);
-        Vector3Int tilePos = gridManager.GetTilePosition(point);
+        if (!canFarm) return;
+
+        Vector2 point =
+            player.GetInteractionPoint(interactionDistance);
+
+        Vector3Int tilePos =
+            gridManager.GetTilePosition(point);
 
         gridManager.WaterTile(tilePos);
     }
 
-    // Sembrar
+    // =========================================
+    // 🌱 PLANTAR
+    // =========================================
     public void Plant()
     {
-        Vector2 point = player.GetInteractionPoint(interactionDistance);
-        Vector3Int tilePos = gridManager.GetTilePosition(point);
+        if (!canFarm) return;
+
+        Vector2 point =
+            player.GetInteractionPoint(interactionDistance);
+
+        Vector3Int tilePos =
+            gridManager.GetTilePosition(point);
 
         gridManager.PlantTile(tilePos);
     }
 
-    // Cosechar
+    // =========================================
+    // 🌾 COSECHAR
+    // =========================================
     public void Harvest()
     {
-        Vector2 point = player.GetInteractionPoint(interactionDistance);
-        Vector3Int tilePos = gridManager.GetTilePosition(point);
+        if (!canFarm) return;
 
-        bool success = gridManager.HarvestTile(tilePos);
+        Vector2 point =
+            player.GetInteractionPoint(interactionDistance);
 
-        // Si se pudo cosechar, aumentar recurso
+        Vector3Int tilePos =
+            gridManager.GetTilePosition(point);
+
+        bool success =
+            gridManager.HarvestTile(tilePos);
+
+        // Si se pudo cosechar
         if (success)
         {
             wheatCount++;
-            Debug.Log("Trigo: " + wheatCount);
+
+            Debug.Log("🌾 Trigo actual: " + wheatCount);
         }
+    }
+
+    // =========================================
+    // 🍞 COMER TRIGO
+    // =========================================
+    public void EatWheat()
+    {
+        // Verificar trigo
+        if (wheatCount <= 0)
+        {
+            Debug.Log("❌ No tienes trigo");
+            return;
+        }
+
+        // Consumir trigo
+        wheatCount--;
+
+        // Curar jugador
+        if (playerHealth != null)
+        {
+            playerHealth.Heal(healAmount);
+        }
+
+        Debug.Log("🍞 Trigo consumido");
+        Debug.Log("🌾 Trigo restante: " + wheatCount);
     }
 }

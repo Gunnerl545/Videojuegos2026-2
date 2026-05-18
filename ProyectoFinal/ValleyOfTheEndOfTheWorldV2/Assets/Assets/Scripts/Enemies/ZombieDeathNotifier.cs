@@ -8,6 +8,11 @@ public class ZombieDeathNotifier : MonoBehaviour
     {
         if (spawner != null)
         {
+            if (SaveSystem.Instance != null &&
+                SaveSystem.Instance.isRollingBack)
+            {
+                return;
+            }
             spawner.OnZombieDied();
         }
     }

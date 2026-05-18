@@ -3,6 +3,7 @@ using UnityEngine;
 public class PlayerHealth : MonoBehaviour
 {
     public int maxHealth = 5;
+
     private int currentHealth;
 
     void Start()
@@ -10,12 +11,12 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = maxHealth;
     }
 
+    // Recibir daño
     public void TakeDamage(int damage)
     {
         currentHealth -= damage;
 
-        Debug.Log("Vida: " + currentHealth);
-        Debug.Log("Jugador recibió daño. Vida: " + currentHealth);
+        Debug.Log("❤️ Vida actual: " + currentHealth);
 
         if (currentHealth <= 0)
         {
@@ -23,21 +24,57 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
+    // Morir
     void Die()
     {
-        Debug.Log("Jugador murió → rollback");
+        Debug.Log("☠️ Jugador murió");
 
-        // eliminar todos los zombies
-        Zombie[] zombies = FindObjectsOfType<Zombie>();
+        // Destruir zombies normales
+        Zombie[] zombies =
+            FindObjectsOfType<Zombie>();
 
         foreach (Zombie z in zombies)
         {
             Destroy(z.gameObject);
         }
 
-        // rollback
-        SaveSystem.Instance.LoadGame();
+        // Destruir flankers
+        FlankerZombie[] flankers =
+            FindObjectsOfType<FlankerZombie>();
 
+        foreach (FlankerZombie f in flankers)
+        {
+            Destroy(f.gameObject);
+        }
+
+        // Rollback
+        SaveSystem.Instance.LoadGame();
+    }
+
+    // 🔁 Restaurar vida completa
+    public void RestoreFullHealth()
+    {
         currentHealth = maxHealth;
+
+        Debug.Log("💚 Vida restaurada");
+    }
+
+    // Obtener vida actual (útil para UI)
+    public int GetCurrentHealth()
+    {
+        return currentHealth;
+    }
+
+    public void Heal(int amount)
+    {
+        currentHealth += amount;
+
+        // Evitar pasar vida máxima
+        if (currentHealth > maxHealth)
+        {
+            currentHealth = maxHealth;
+        }
+
+        Debug.Log("💚 Vida curada: " + currentHealth);
     }
 }

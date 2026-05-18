@@ -1,107 +1,157 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 // Sistema encargado de guardar y restaurar el estado completo del juego
 public class SaveSystem : MonoBehaviour
 {
-    // Instancia global (patrón Singleton)
-    // Permite acceder al SaveSystem desde cualquier script
+    // Singleton global
     public static SaveSystem Instance;
 
-    // Estado guardado en memoria (snapshot del juego)
+    // Evita eventos durante rollback
+    public bool isRollingBack = false;
+
+    // Snapshot guardado
     private GameState savedState;
 
-    // Referencias a los sistemas principales del juego
-    private GridManager gridManager;     // Maneja el mundo (tiles)
-    private PlayerFarming playerFarming; // Maneja recursos del jugador (trigo)
-    private Transform player;            // Transform del jugador (posición)
+    // Referencias principales
+    private GridManager gridManager;
+    private PlayerFarming playerFarming;
+    private Transform player;
+    private TimeManager timeManager;
 
     void Awake()
     {
-        // Inicialización del Singleton
-        // Solo debería existir una instancia en la escena
+        // Inicializar singleton
         Instance = this;
+
+        // Buscar referencias
+        FindReferences();
     }
 
-    void Start()
+    // Buscar referencias importantes
+    void FindReferences()
     {
-        // Obtener referencias automáticamente al iniciar la escena
-
-        // Encuentra el GridManager en la escena
         gridManager = FindObjectOfType<GridManager>();
 
-        // Encuentra el sistema de farming del jugador
         playerFarming = FindObjectOfType<PlayerFarming>();
 
-        // Busca el objeto con tag "Player" y obtiene su Transform
-        player = GameObject.FindGameObjectWithTag("Player").transform;
+        timeManager = FindObjectOfType<TimeManager>();
+
+        GameObject playerObject =
+            GameObject.FindGameObjectWithTag("Player");
+
+        if (playerObject != null)
+        {
+            player = playerObject.transform;
+        }
     }
 
-    // 💾 MÉTODO PRINCIPAL DE GUARDADO
-    // Captura el estado actual del juego
+    // 💾 GUARDAR JUEGO
     public void SaveGame(int currentDay)
     {
-        // Crear un nuevo snapshot (estado limpio)
+        // Reintentar referencias si falta algo
+        if (gridManager == null ||
+            playerFarming == null ||
+            player == null ||
+            timeManager == null)
+        {
+            Debug.LogWarning("Reintentando referencias...");
+
+            FindReferences();
+        }
+
+        // Verificar referencias
+        if (gridManager == null ||
+            playerFarming == null ||
+            player == null ||
+            timeManager == null)
+        {
+            Debug.LogError("No se pudo guardar el juego");
+            return;
+        }
+
+        // Crear snapshot nuevo
         savedState = new GameState();
 
-        // Guardar información global
+        // Guardar día
         savedState.day = currentDay;
 
-        // Guardar posición del jugador
-        savedState.playerPosition = player.position;
+        // Guardar posición jugador
+        savedState.playerPosition =
+            player.position;
 
-        // Guardar recursos (trigo recolectado)
-        savedState.wheatCount = playerFarming.wheatCount;
+        // Guardar trigo
+        savedState.wheatCount =
+            playerFarming.wheatCount;
 
-        // Guardar el estado completo del grid (mundo)
-        // IMPORTANTE: se usa copia profunda para evitar referencias compartidas
-        savedState.gridData = DeepCopyGrid(gridManager.GetGridData());
+        // Guardar grid completo
+        savedState.gridData =
+            DeepCopyGrid(gridManager.GetGridData());
 
-        Debug.Log("Juego guardado completo");
+        Debug.Log("💾 Juego guardado correctamente");
     }
 
-    // 🔁 MÉTODO PRINCIPAL DE CARGA (ROLLBACK)
-    // Restaura el estado previamente guardado
+    // 🔁 CARGAR JUEGO
     public void LoadGame()
     {
-        // Validación: no hay estado guardado
+        // ACTIVAR rollback
+        isRollingBack = true;
+
+        // Verificar save
         if (savedState == null)
         {
             Debug.LogError("No hay estado guardado");
+
+            isRollingBack = false;
             return;
         }
 
-        // Validación: el grid guardado es inválido
+        // Verificar grid
         if (savedState.gridData == null)
         {
             Debug.LogError("GridData es null");
+
+            isRollingBack = false;
             return;
         }
 
-        // Restaurar el estado del mundo (tiles)
+        // Restaurar grid
         gridManager.SetGridData(savedState.gridData);
 
-        // Restaurar posición del jugador
-        player.position = savedState.playerPosition;
+        // Restaurar posición
+        player.position =
+            savedState.playerPosition;
 
-        // Restaurar recursos del jugador
-        playerFarming.wheatCount = savedState.wheatCount;
+        // Restaurar trigo
+        playerFarming.wheatCount =
+            savedState.wheatCount;
 
-        Debug.Log("Rollback completo aplicado");
+        PlayerHealth health =
+            player.GetComponent<PlayerHealth>();
+
+        if (health != null)
+        {
+            health.RestoreFullHealth();
+        }
+
+        // Reiniciar día correctamente
+        timeManager.ResetDayState(savedState.day);
+
+        Debug.Log("🔁 Rollback completo aplicado");
+
+        // DESACTIVAR rollback
+        isRollingBack = false;
     }
 
-    // 🧠 MÉTODO CRÍTICO: COPIA PROFUNDA
-    // Crea una copia independiente del estado del grid
-    // Evita que el estado guardado se modifique accidentalmente
-    private System.Collections.Generic.Dictionary<Vector3Int, TileData> DeepCopyGrid(
-        System.Collections.Generic.Dictionary<Vector3Int, TileData> original)
+    // 🧠 COPIA PROFUNDA DEL GRID
+    private Dictionary<Vector3Int, TileData> DeepCopyGrid(
+        Dictionary<Vector3Int, TileData> original)
     {
-        // Nuevo diccionario que contendrá la copia
-        var copy = new System.Collections.Generic.Dictionary<Vector3Int, TileData>();
+        Dictionary<Vector3Int, TileData> copy =
+            new Dictionary<Vector3Int, TileData>();
 
-        // Recorrer todos los tiles del grid original
         foreach (var pair in original)
         {
-            // Crear un nuevo TileData (NO referencia al original)
             TileData newTile = new TileData
             {
                 isPlowed = pair.Value.isPlowed,
@@ -111,11 +161,9 @@ public class SaveSystem : MonoBehaviour
                 isReadyToHarvest = pair.Value.isReadyToHarvest
             };
 
-            // Guardar la copia en la misma posición
             copy[pair.Key] = newTile;
         }
 
-        // Retornar el nuevo diccionario completamente independiente
         return copy;
     }
 }

@@ -1,118 +1,175 @@
 using UnityEngine;
 using System;
+using System.Collections;
 
 // Controla el flujo del juego basado en tiempo y fases
 public class TimeManager : MonoBehaviour
 {
     [Header("Duración (segundos)")]
 
-    // Duración total del día (25 min)
+    // Duración total del día
     public float dayDuration = 1500f;
 
-    // Duración de la fase de farming (20 min)
+    // Duración de la fase de farming
     public float farmingDuration = 1200f;
 
-    // Referencia al mundo (no es estrictamente necesaria aquí, pero útil)
+    // Referencia al mundo
     private GridManager gridManager;
 
-    // Tiempo acumulado desde el inicio del día
+    // Tiempo acumulado del día
     private float currentTime = 0f;
 
-    // Fases del juego (máquina de estados)
+    // Máquina de estados
     public enum Phase
     {
         Farming,
         Defense
     }
 
-    // Fase actual del juego
+    // Estado actual
     public Phase currentPhase;
 
-    // Contador de días
+    // Día actual
     public int currentDay = 1;
 
-    // EVENTOS GLOBALES (clave para desacoplar sistemas)
+    // EVENTOS GLOBALES
     public static event Action OnFarmingStart;
     public static event Action OnDefenseStart;
     public static event Action OnDayEnd;
 
-    void Start()
+    // START
+    IEnumerator Start()
     {
-        // Inicializar en fase de farming
-        currentPhase = Phase.Farming;
+        // Esperar 1 frame
+        yield return null;
 
-        // Notificar a otros sistemas (ej: PlayerFarming)
-        OnFarmingStart?.Invoke();
-
-        // Obtener referencia al GridManager
+        // Obtener referencias
         gridManager = FindObjectOfType<GridManager>();
 
+        // Estado inicial
         currentPhase = Phase.Farming;
 
-        // Guardar estado inicial del día (snapshot)
+        currentTime = 0f;
+
+        // Guardar snapshot del día
         SaveSystem.Instance.SaveGame(currentDay);
 
-        // Notificar inicio de farming (otra vez, redundante)
+        Debug.Log("💾 Estado inicial guardado");
+
+        // Avisar inicio de farming
         OnFarmingStart?.Invoke();
     }
 
     void Update()
     {
-        // Avanzar el tiempo del día
+        // Evitar avanzar tiempo durante rollback
+        if (SaveSystem.Instance != null &&
+            SaveSystem.Instance.isRollingBack)
+        {
+            return;
+        }
+
+        // Avanzar tiempo
         currentTime += Time.deltaTime;
 
-        // Verificar si hay cambio de fase
+        // Revisar cambios de fase
         CheckPhaseChange();
     }
 
     void CheckPhaseChange()
     {
-        // Si estamos en farming y se acabó el tiempo → pasar a defensa
-        if (currentPhase == Phase.Farming && currentTime >= farmingDuration)
+        // Farming → Defensa
+        if (currentPhase == Phase.Farming &&
+            currentTime >= farmingDuration)
         {
             currentPhase = Phase.Defense;
 
             Debug.Log("🧟 Defensa iniciada");
 
-            // Notificar a otros sistemas (ej: ZombieSpawner)
+            // Evento global
             OnDefenseStart?.Invoke();
+        }
+
+        // Fin del día
+        if (currentTime >= dayDuration)
+        {
+            EndDay();
         }
     }
 
-    // Finalizar el día (cuando se eliminan todos los zombies)
+    // 🌅 Finalizar día
     void EndDay()
     {
         Debug.Log("🌅 Día terminado");
 
-        // Avanzar al siguiente día
+        // Siguiente día
         currentDay++;
 
         // Reiniciar tiempo
         currentTime = 0f;
 
-        // Volver a fase de farming
+        // Reiniciar fase
         currentPhase = Phase.Farming;
 
-        // Guardar nuevo estado (nuevo checkpoint)
+        // Reiniciar spawner
+        ZombieSpawner spawner = FindObjectOfType<ZombieSpawner>();
+
+        if (spawner != null)
+        {
+            spawner.ResetSpawner();
+        }
+
+        // Guardar nuevo checkpoint
         SaveSystem.Instance.SaveGame(currentDay);
 
-        // Notificar fin de día
+        Debug.Log("💾 Nuevo día guardado");
+
+        // Eventos
         OnDayEnd?.Invoke();
 
-        // Notificar inicio de nueva fase de farming
         OnFarmingStart?.Invoke();
     }
 
-    // Devuelve el tiempo restante del día
+    // 🔁 REINICIAR DÍA TRAS MORIR
+    public void ResetDayState(int day)
+    {
+        Debug.Log("🔁 Reiniciando día");
+
+        // Restaurar mismo día
+        currentDay = day;
+
+        // Reiniciar tiempo COMPLETAMENTE
+        currentTime = 0f;
+
+        // Volver SIEMPRE a farming
+        currentPhase = Phase.Farming;
+
+        // Reactivar farming
+        OnFarmingStart?.Invoke();
+    }
+
+    // Tiempo restante
     public float GetRemainingTime()
     {
         return dayDuration - currentTime;
     }
 
-    // Permite forzar el fin del día desde otros scripts
-    // (ej: cuando mueren todos los zombies)
+    // Obtener tiempo actual
+    public float GetCurrentTime()
+    {
+        return currentTime;
+    }
+
+    // Forzar fin del día
     public void ForceEndDay()
     {
+        // Evitar bugs durante rollback
+        if (SaveSystem.Instance != null &&
+            SaveSystem.Instance.isRollingBack)
+        {
+            return;
+        }
+
         EndDay();
     }
 }
