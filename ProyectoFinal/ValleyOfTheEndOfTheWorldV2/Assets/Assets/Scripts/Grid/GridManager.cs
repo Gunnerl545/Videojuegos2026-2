@@ -6,7 +6,7 @@ using UnityEngine.Tilemaps;
 public class GridManager : MonoBehaviour
 {
     [Header("Tilemap")]
-    public Tilemap tilemap; // Referencia al tilemap de Unity
+    public Tilemap tilemap;
 
     [Header("Tiles")]
     public TileBase grassTile;
@@ -15,16 +15,26 @@ public class GridManager : MonoBehaviour
     public TileBase seededTile;
     public TileBase grownTile;
 
-    // Diccionario que guarda el estado lógico de cada tile
-    private Dictionary<Vector3Int, TileData> tileDataDict = new Dictionary<Vector3Int, TileData>();
+    // Diccionario con el estado lógico de los tiles
+    private Dictionary<Vector3Int, TileData> tileDataDict =
+        new Dictionary<Vector3Int, TileData>();
 
-    // Convierte una posición del mundo a una celda del tilemap
+    // Tiempo de crecimiento
+    public float growDuration = 10f;
+
+    // =====================================
+    // OBTENER POSICIÓN TILE
+    // =====================================
+
     public Vector3Int GetTilePosition(Vector2 worldPosition)
     {
         return tilemap.WorldToCell(worldPosition);
     }
 
-    // Obtiene el estado del tile o lo crea si no existe
+    // =====================================
+    // OBTENER DATOS TILE
+    // =====================================
+
     public TileData GetTileData(Vector3Int pos)
     {
         if (!tileDataDict.ContainsKey(pos))
@@ -35,48 +45,83 @@ public class GridManager : MonoBehaviour
         return tileDataDict[pos];
     }
 
-    // ⛏️ Arar
+    // =====================================
+    // ⛏️ ARAR
+    // =====================================
+
     public void HoeTile(Vector3Int position)
     {
-        TileBase currentTile = tilemap.GetTile(position);
-        TileData data = GetTileData(position);
+        TileBase currentTile =
+            tilemap.GetTile(position);
+
+        TileData data =
+            GetTileData(position);
 
         if (currentTile == grassTile)
         {
             data.isPlowed = true;
+
             data.isWatered = false;
 
-            tilemap.SetTile(position, plowedTile);
-        }
-    }
+            data.hasSeed = false;
 
-    public void PlantTile(Vector3Int position)
-    {
-        TileData data = GetTileData(position);
-
-        if (data.isPlowed && data.isWatered && !data.hasSeed)
-        {
-            data.hasSeed = true;
-            data.growStartTime = Time.time;
             data.isReadyToHarvest = false;
 
-            tilemap.SetTile(position, seededTile);
+            tilemap.SetTile(
+                position,
+                plowedTile);
         }
     }
+
+    // =====================================
+    // 💧 REGAR
+    // =====================================
 
     public void WaterTile(Vector3Int position)
     {
-        TileData data = GetTileData(position);
+        TileData data =
+            GetTileData(position);
 
-        if (data.isPlowed && !data.isWatered)
+        if (data.isPlowed &&
+            !data.isWatered)
         {
             data.isWatered = true;
 
-            tilemap.SetTile(position, wateredTile);
+            tilemap.SetTile(
+                position,
+                wateredTile);
         }
     }
 
-    public float growDuration = 10f; // temporal (luego será 1 día)
+    // =====================================
+    // 🌱 SEMBRAR
+    // =====================================
+
+    public void PlantTile(Vector3Int position)
+    {
+        TileData data =
+            GetTileData(position);
+
+        if (data.isPlowed &&
+            data.isWatered &&
+            !data.hasSeed)
+        {
+            data.hasSeed = true;
+
+            data.growStartTime =
+                Time.time;
+
+            data.isReadyToHarvest = false;
+
+            tilemap.SetTile(
+                position,
+                seededTile);
+        }
+    }
+
+    // =====================================
+    // ACTUALIZAR CRECIMIENTO
+    // =====================================
 
     void Update()
     {
@@ -85,77 +130,193 @@ public class GridManager : MonoBehaviour
 
     void UpdateGrowth()
     {
-        if (tileDataDict == null) return;
+        if (tileDataDict == null)
+        {
+            return;
+        }
 
         foreach (var pair in tileDataDict)
         {
-            if (pair.Value == null) continue;
+            if (pair.Value == null)
+            {
+                continue;
+            }
 
             TileData data = pair.Value;
 
-            if (data.hasSeed && !data.isReadyToHarvest)
+            // Verificar crecimiento
+            if (data.hasSeed &&
+                !data.isReadyToHarvest)
             {
-                if (Time.time - data.growStartTime >= growDuration)
+                if (Time.time - data.growStartTime
+                    >= growDuration)
                 {
                     data.isReadyToHarvest = true;
 
-                    tilemap.SetTile(pair.Key, grownTile);
+                    tilemap.SetTile(
+                        pair.Key,
+                        grownTile);
                 }
             }
         }
     }
 
+    // =====================================
+    // 🌾 COSECHAR
+    // =====================================
+
     public bool HarvestTile(Vector3Int position)
     {
-        TileData data = GetTileData(position);
+        TileData data =
+            GetTileData(position);
 
-        if (data.hasSeed && data.isReadyToHarvest)
+        if (data.hasSeed &&
+            data.isReadyToHarvest)
         {
-            // Reset estado (pero dejamos la tierra arada)
+            // Reset estado
             data.hasSeed = false;
+
             data.isWatered = false;
+
             data.isReadyToHarvest = false;
 
-            // Volver a tierra arada
-            tilemap.SetTile(position, plowedTile);
+            // Mantener tierra arada
+            tilemap.SetTile(
+                position,
+                plowedTile);
 
-            return true; // éxito (para dar recompensa)
+            return true;
         }
 
         return false;
     }
+
+    // =====================================
+    // OBTENER GRID
+    // =====================================
 
     public Dictionary<Vector3Int, TileData> GetGridData()
     {
         return tileDataDict;
     }
 
-    public void SetGridData(Dictionary<Vector3Int, TileData> newData)
+    // =====================================
+    // RESTAURAR GRID
+    // =====================================
+
+    public void SetGridData(
+        Dictionary<Vector3Int, TileData> newData)
     {
         if (newData == null)
         {
-            Debug.LogError("SetGridData recibió null");
+            Debug.LogError(
+                "SetGridData recibió null");
+
             return;
         }
 
-        tileDataDict = newData;
+        // =====================================
+        // LIMPIAR TILES ACTUALES
+        // =====================================
 
         foreach (var pair in tileDataDict)
         {
-            if (pair.Value == null) continue;
+            tilemap.SetTile(
+                pair.Key,
+                grassTile);
+        }
 
+        // =====================================
+        // NUEVO DICCIONARIO
+        // =====================================
+
+        tileDataDict =
+            new Dictionary<Vector3Int, TileData>();
+
+        // =====================================
+        // COPIA PROFUNDA
+        // =====================================
+
+        foreach (var pair in newData)
+        {
+            if (pair.Value == null)
+            {
+                continue;
+            }
+
+            TileData copiedTile =
+                new TileData
+            {
+                isPlowed =
+                    pair.Value.isPlowed,
+
+                isWatered =
+                    pair.Value.isWatered,
+
+                hasSeed =
+                    pair.Value.hasSeed,
+
+                growStartTime =
+                    pair.Value.growStartTime,
+
+                isReadyToHarvest =
+                    pair.Value.isReadyToHarvest
+            };
+
+            tileDataDict[pair.Key] =
+                copiedTile;
+        }
+
+        // =====================================
+        // RECONSTRUIR GRID
+        // =====================================
+
+        foreach (var pair in tileDataDict)
+        {
             TileData data = pair.Value;
 
+            // Planta crecida
             if (data.isReadyToHarvest)
-                tilemap.SetTile(pair.Key, grownTile);
+            {
+                tilemap.SetTile(
+                    pair.Key,
+                    grownTile);
+            }
+
+            // Planta sembrada
             else if (data.hasSeed)
-                tilemap.SetTile(pair.Key, seededTile);
+            {
+                tilemap.SetTile(
+                    pair.Key,
+                    seededTile);
+            }
+
+            // Tierra regada
             else if (data.isWatered)
-                tilemap.SetTile(pair.Key, wateredTile);
+            {
+                tilemap.SetTile(
+                    pair.Key,
+                    wateredTile);
+            }
+
+            // Tierra arada
             else if (data.isPlowed)
-                tilemap.SetTile(pair.Key, plowedTile);
+            {
+                tilemap.SetTile(
+                    pair.Key,
+                    plowedTile);
+            }
+
+            // Pasto
             else
-                tilemap.SetTile(pair.Key, grassTile);
+            {
+                tilemap.SetTile(
+                    pair.Key,
+                    grassTile);
+            }
         }
+
+        Debug.Log(
+            "🌱 Grid restaurado correctamente");
     }
 }

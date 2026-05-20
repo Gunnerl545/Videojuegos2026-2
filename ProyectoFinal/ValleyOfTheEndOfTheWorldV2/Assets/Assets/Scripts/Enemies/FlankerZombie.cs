@@ -2,34 +2,44 @@ using UnityEngine;
 
 public class FlankerZombie : MonoBehaviour
 {
-    // Velocidad del enemigo
+    // =====================================
+    // MOVIMIENTO
+    // =====================================
+
     public float moveSpeed = 2.5f;
 
-    // Distancia a la que comienza a rodear
     public float orbitRadius = 2f;
 
-    // Daño por ataque
+    // =====================================
+    // COMBATE
+    // =====================================
+
+    public int maxHealth = 3;
+
+    private int currentHealth;
+
     public int damage = 1;
 
-    // Tiempo entre ataques
     public float attackCooldown = 1f;
 
-    // Próximo momento permitido para atacar
     private float nextAttackTime = 0f;
 
-    // Referencia al jugador
+    // =====================================
+    // REFERENCIAS
+    // =====================================
+
     private Transform player;
 
-    // Referencia al controlador del jugador
     private PlayerController playerController;
 
     // Dirección de órbita
-    // 1 = derecha
-    // -1 = izquierda
     private int orbitDirection;
 
     void Start()
     {
+        // Vida inicial
+        currentHealth = maxHealth;
+
         // Buscar jugador
         GameObject playerObj =
             GameObject.FindGameObjectWithTag("Player");
@@ -42,7 +52,7 @@ public class FlankerZombie : MonoBehaviour
                 playerObj.GetComponent<PlayerController>();
         }
 
-        // Elegir lado aleatorio para rodear
+        // Elegir lado aleatorio
         orbitDirection =
             Random.value > 0.5f ? 1 : -1;
     }
@@ -56,47 +66,53 @@ public class FlankerZombie : MonoBehaviour
             return;
         }
 
-        // Vector hacia el jugador
+        // Vector hacia jugador
         Vector2 toPlayer =
             (player.position - transform.position);
 
-        // Distancia actual
         float distance =
             toPlayer.magnitude;
 
-        // Dirección normalizada al jugador
         Vector2 directionToPlayer =
             toPlayer.normalized;
 
-        // Dirección perpendicular (para rodear)
+        // Dirección perpendicular
         Vector2 perpendicular =
             new Vector2(
                 -directionToPlayer.y,
                 directionToPlayer.x);
 
-        // Aplicar lado elegido
         perpendicular *= orbitDirection;
 
         Vector2 moveDirection;
 
+        // Distancia mínima
+        float minimumDistance = 1.2f;
+
         // =====================================
-        // COMPORTAMIENTO
+        // IA
         // =====================================
 
-        // Si está lejos → acercarse
+        // Muy lejos → acercarse
         if (distance > orbitRadius)
         {
             moveDirection = directionToPlayer;
         }
-        else
+
+        // Muy cerca → alejarse
+        else if (distance < minimumDistance)
         {
-            // Si está cerca → orbitar alrededor
-            moveDirection =
-                (directionToPlayer * 0.3f) +
-                (perpendicular * 0.7f);
+            moveDirection = -directionToPlayer;
         }
 
-        // Normalizar dirección
+        // Distancia media → orbitar
+        else
+        {
+            moveDirection =
+                (directionToPlayer * 0.2f) +
+                (perpendicular * 0.8f);
+        }
+
         moveDirection.Normalize();
 
         // Movimiento
@@ -108,34 +124,67 @@ public class FlankerZombie : MonoBehaviour
     }
 
     // =====================================
-    // ATAQUE CON COOLDOWN
+    // ATAQUE
     // =====================================
+
     void OnTriggerStay2D(Collider2D other)
     {
-        // Verificar jugador
         if (!other.CompareTag("Player"))
         {
             return;
         }
 
-        // Verificar cooldown
+        // Cooldown
         if (Time.time < nextAttackTime)
         {
             return;
         }
 
-        // Obtener vida del jugador
         PlayerHealth health =
             other.GetComponent<PlayerHealth>();
 
         if (health != null)
         {
-            // Hacer daño
             health.TakeDamage(damage);
 
-            // Reiniciar cooldown
             nextAttackTime =
                 Time.time + attackCooldown;
         }
+    }
+
+    // =====================================
+    // RECIBIR DAÑO
+    // =====================================
+
+    public void TakeDamage(int damageAmount)
+    {
+        currentHealth -= damageAmount;
+
+        Debug.Log("💥 Flanker recibió daño");
+
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+
+    // =====================================
+    // MORIR
+    // =====================================
+
+    void Die()
+    {
+        Debug.Log("☠️ Flanker muerto");
+
+        ZombieDeathNotifier notifier =
+            GetComponent<ZombieDeathNotifier>();
+
+        if (notifier != null &&
+            notifier.spawner != null)
+        {
+            notifier.spawner.OnZombieDied();
+        }
+
+        Destroy(gameObject);
     }
 }
