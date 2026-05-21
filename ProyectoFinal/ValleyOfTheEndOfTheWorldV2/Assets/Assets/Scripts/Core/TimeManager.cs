@@ -10,13 +10,13 @@ public class TimeManager : MonoBehaviour
     // Duración total del día
     public float dayDuration = 1500f;
 
-    // Duración de la fase de farming
+    // Tiempo antes de iniciar defensa
     public float farmingDuration = 1200f;
 
-    // Referencia al mundo
+    // Referencia al grid
     private GridManager gridManager;
 
-    // Tiempo acumulado del día
+    // Tiempo acumulado
     private float currentTime = 0f;
 
     // Máquina de estados
@@ -37,28 +37,36 @@ public class TimeManager : MonoBehaviour
     public static event Action OnDefenseStart;
     public static event Action OnDayEnd;
 
+    // =====================================
     // START
+    // =====================================
+
     IEnumerator Start()
     {
         // Esperar 1 frame
         yield return null;
 
-        // Obtener referencias
-        gridManager = FindObjectOfType<GridManager>();
+        // Referencias
+        gridManager =
+            FindObjectOfType<GridManager>();
 
         // Estado inicial
         currentPhase = Phase.Farming;
 
         currentTime = 0f;
 
-        // Guardar snapshot del día
+        // Guardar checkpoint inicial
         SaveSystem.Instance.SaveGame(currentDay);
 
         Debug.Log("💾 Estado inicial guardado");
 
-        // Avisar inicio de farming
+        // Iniciar farming
         OnFarmingStart?.Invoke();
     }
+
+    // =====================================
+    // UPDATE
+    // =====================================
 
     void Update()
     {
@@ -69,12 +77,23 @@ public class TimeManager : MonoBehaviour
             return;
         }
 
-        // Avanzar tiempo
-        currentTime += Time.deltaTime;
+        // =====================================
+        // IMPORTANTE:
+        // SOLO avanza el tiempo en FARMING
+        // =====================================
 
-        // Revisar cambios de fase
+        if (currentPhase == Phase.Farming)
+        {
+            currentTime += Time.deltaTime;
+        }
+
+        // Revisar fases
         CheckPhaseChange();
     }
+
+    // =====================================
+    // CAMBIO DE FASE
+    // =====================================
 
     void CheckPhaseChange()
     {
@@ -90,14 +109,22 @@ public class TimeManager : MonoBehaviour
             OnDefenseStart?.Invoke();
         }
 
-        // Fin del día
-        if (currentTime >= dayDuration)
-        {
-            EndDay();
-        }
+        // IMPORTANTE:
+        // YA NO existe:
+        //
+        // if(currentTime >= dayDuration)
+        // {
+        //     EndDay();
+        // }
+        //
+        // El día termina SOLO cuando
+        // todos los zombies mueren.
     }
 
-    // 🌅 Finalizar día
+    // =====================================
+    // 🌅 FINALIZAR DÍA
+    // =====================================
+
     void EndDay()
     {
         Debug.Log("🌅 Día terminado");
@@ -108,11 +135,12 @@ public class TimeManager : MonoBehaviour
         // Reiniciar tiempo
         currentTime = 0f;
 
-        // Reiniciar fase
+        // Volver a farming
         currentPhase = Phase.Farming;
 
         // Reiniciar spawner
-        ZombieSpawner spawner = FindObjectOfType<ZombieSpawner>();
+        ZombieSpawner spawner =
+            FindObjectOfType<ZombieSpawner>();
 
         if (spawner != null)
         {
@@ -130,42 +158,56 @@ public class TimeManager : MonoBehaviour
         OnFarmingStart?.Invoke();
     }
 
-    // 🔁 REINICIAR DÍA TRAS MORIR
+    // =====================================
+    // 🔁 RESET TRAS MORIR
+    // =====================================
+
     public void ResetDayState(int day)
     {
         Debug.Log("🔁 Reiniciando día");
 
-        // Restaurar mismo día
+        // Restaurar día
         currentDay = day;
 
-        // Reiniciar tiempo COMPLETAMENTE
+        // Reiniciar tiempo
         currentTime = 0f;
 
-        // Volver SIEMPRE a farming
+        // Reiniciar fase
         currentPhase = Phase.Farming;
 
         // Reactivar farming
         OnFarmingStart?.Invoke();
     }
 
-    // Tiempo restante
+    // =====================================
+    // GETTERS
+    // =====================================
+
     public float GetRemainingTime()
     {
         return dayDuration - currentTime;
     }
 
-    // Obtener tiempo actual
     public float GetCurrentTime()
     {
         return currentTime;
     }
 
-    // Forzar fin del día
+    // =====================================
+    // FORZAR FIN DEL DÍA
+    // =====================================
+
     public void ForceEndDay()
     {
         // Evitar bugs durante rollback
         if (SaveSystem.Instance != null &&
             SaveSystem.Instance.isRollingBack)
+        {
+            return;
+        }
+
+        // Solo permitir durante defensa
+        if (currentPhase != Phase.Defense)
         {
             return;
         }
